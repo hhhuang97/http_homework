@@ -6,6 +6,7 @@ import server.handler.GeneralHandler;
 import server.handler.HighStakesHandler;
 import server.handler.SessionHandler;
 import server.handler.StakeHandler;
+import server.scheduler.SessionCleanScheduler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -30,6 +31,10 @@ public class MyHttpServer {
         server.setExecutor(executor);
 
         server.start();
+
+        //启动定时任务清理session
+        SessionCleanScheduler.startSessionCleanupTask();
+
         System.out.println("Server started on port 8001");
     }
 }

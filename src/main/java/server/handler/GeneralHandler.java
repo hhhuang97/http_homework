@@ -2,7 +2,7 @@ package server.handler;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import server.utils.HttpResponseUtil;
+import server.utils.HttpUtil;
 
 import java.io.IOException;
 
@@ -24,31 +24,49 @@ public class GeneralHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        String path = exchange.getRequestURI().getPath();
-        String[] segments = path.split("/");
+        String[] segments = HttpUtil.getUrlParam(exchange);
 
         if(segments.length < 3){
             String response = "400 Bad Request: Invalid path format";
-            HttpResponseUtil.sendResponse(exchange, 400, response);
+            HttpUtil.sendResponse(exchange, 400, response);
             return;
         }
 
-        // 根据请求类型选择具体请求实现方案
         String action = segments[2];
+        String method = HttpUtil.getMethod(exchange);
+
+        // 根据请求类型选择具体请求实现方案
+        String response;
+        int statusCode;
+
         switch (action) {
             case "session":
-                sessionHandler.handle(exchange);
+            case "highstakes":
+                if (!"GET".equals(method)) {
+                    response = "405 Method Not Allowed";
+                    statusCode = 405;
+                } else {
+                    if ("session".equals(action)) {
+                        sessionHandler.handle(exchange);
+                    } else {
+                        highStakesHandler.handle(exchange);
+                    }
+                    return;
+                }
                 break;
             case "stake":
-                stakeHandler.handle(exchange);
-                break;
-            case "highstakes":
-                highStakesHandler.handle(exchange);
+                if (!"POST".equals(method)) {
+                    response = "405 Method Not Allowed";
+                    statusCode = 405;
+                } else {
+                    stakeHandler.handle(exchange);
+                    return;
+                }
                 break;
             default:
-                String response = "404 Not Found: Action not found";
-                HttpResponseUtil.sendResponse(exchange, 404, response);
-                break;
+                response = "404 Not Found: Action not found";
+                statusCode = 404;
         }
+        HttpUtil.sendResponse(exchange, statusCode, response);
     }
 }
